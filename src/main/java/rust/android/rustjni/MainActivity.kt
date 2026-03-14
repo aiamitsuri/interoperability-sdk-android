@@ -11,6 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import rust.interop.data.*
 import rust.interop.logic.*
 
@@ -19,26 +21,25 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            // 1. Keep track of the current page number
             var currentPage by remember { mutableIntStateOf(1) }
             var resultState by remember { mutableStateOf<FilterResponse?>(null) }
             var isLoading by remember { mutableStateOf(false) }
 
-            // 2. Automatically fetch when the page changes
+            // Extract total pages dynamically from the response
+            val totalPages = resultState?.pagination?.totalPages?.toInt() ?: 1
+
             LaunchedEffect(currentPage) {
                 isLoading = true
                 try {
-                    val params = FilterParams(
-                        null,
-                        null,
-                        null,
-                        null,
-                        currentPage.toString(),
-                        null
-                    )
-                    resultState = fetchInteroperability(params)
+                    val params = FilterParams(null, null, null, null, currentPage.toString(), null)
+
+                    // Switch to IO thread for the Rust JNI call
+                    val response = withContext(Dispatchers.IO) {
+                        fetchInteroperability(params)
+                    }
+                    resultState = response
                 } catch (e: Exception) {
-                    // Handle error
+                    // Log error
                 } finally {
                     isLoading = false
                 }
@@ -47,10 +48,9 @@ class MainActivity : ComponentActivity() {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Interoperability API", style = MaterialTheme.typography.headlineMedium)
+                        Text("Interoperability FFI", style = MaterialTheme.typography.headlineMedium)
                         Text("Rust + Android Handheld", style = MaterialTheme.typography.headlineSmall)
 
-                        // 3. Navigation Controls
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -61,21 +61,22 @@ class MainActivity : ComponentActivity() {
                                 enabled = !isLoading && currentPage > 1
                             ) { Text("Previous") }
 
-                            Text("Page $currentPage", style = MaterialTheme.typography.bodyLarge)
+                            // Dynamic Status Text
+                            Text("Page $currentPage of $totalPages", style = MaterialTheme.typography.bodyLarge)
 
                             Button(
-                                onClick = { currentPage++ },
-                                enabled = !isLoading && (resultState?.pagination?.totalPages?.toInt() ?: 5) > currentPage
+                                onClick = { if (currentPage < totalPages) currentPage++ },
+                                // DYNAMIC DISABLE: No longer hardcoded to 5
+                                enabled = !isLoading && currentPage < totalPages
                             ) { Text("Next") }
                         }
 
                         if (isLoading) {
-                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp))
                         }
 
-                        // 4. Data List
                         resultState?.let { response ->
-                            LazyColumn {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
                                 items(response.data) { item ->
                                     Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                                         Column(modifier = Modifier.padding(12.dp)) {
