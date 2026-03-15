@@ -1403,17 +1403,9 @@ enum class Crates {
     
     UNIFFI,
     PYO3,
-    ROBUSTA,
     WASM,
     NEON,
-    RNET,
-    RUSTLER,
-    MAGNUS,
-    MLUA,
-    AUTOCXX,
-    AUTOZIG,
-    EXTENDR,
-    JLRS;
+    FRB;
 
     
 
@@ -1482,7 +1474,7 @@ public object FfiConverterTypeDevelopmentkit: FfiConverterRustBuffer<Development
 enum class Integration {
     
     PENDING,
-    DONE;
+    COMPLETED;
 
     
 
@@ -1520,15 +1512,7 @@ enum class Language {
     NODE,
     GOLANG,
     PYTHON,
-    JVM,
-    NET,
-    BEAM,
-    RUBY,
-    LUA,
-    CPP,
-    ZIG,
-    R,
-    JULIA;
+    DART;
 
     
 
